@@ -15,27 +15,7 @@ if (!isset($_SESSION['id']) || !isset($_SESSION['name'])) {
 $userid = $_SESSION['id'];
 $name = $_SESSION['name'];
 
-$sql = "SELECT r.*, z.zoomlink, z.date AS zoom_date, z.time AS zoom_time 
-        FROM request r 
-        LEFT JOIN zoom z ON r.requestid = z.requestid 
-        WHERE r.userid=?";
-$stmt = mysqli_prepare($conn, $sql);
-if ($stmt) {
-    mysqli_stmt_bind_param($stmt, "i", $userid);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
 
-    $appointments = []; // Initialize an empty array to store multiple requests
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        $appointments[] = $row; // Store each request in the array
-    }
-
-    mysqli_stmt_close($stmt);
-} else {
-    echo "Failed to prepare the SQL statement.";
-    exit();
-}
 mysqli_close($conn);
 ?>
 <!DOCTYPE html>
@@ -306,16 +286,17 @@ mysqli_close($conn);
 }
 
 .popup-form-content .submit-button {
-    background: #27ae60;
+    background: #16a085;
     color: white;
 }
 
 .popup-form-content .submit-button:hover {
-    background: #219150;
+    background: #16a085;
+    color: white;
 }
 
 .popup-form-content .close-button {
-    background: #e74c3c;
+    background: #cd2f0c;
     color: white;
 }
 
@@ -340,6 +321,25 @@ mysqli_close($conn);
         height: auto;
         box-shadow: none; /* Remove box-shadow for smaller screens */
     }
+}
+.cancel {
+        background:  #16a085;
+        color: white;
+        padding: 10px 20px;
+        border: 2px solid #16a085;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s, box-shadow 0.3s, color 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        margin-top: 15px;
+    }
+    .cancel:hover {
+    background: white;
+    color: #16a085;
+    box-shadow: 0px 6px 8px rgba(0, 0, 0, 0.2);
 }
 </style>
 </head>
@@ -392,6 +392,7 @@ mysqli_close($conn);
                         <p><span class="doctor-type">Doctor Type: <?= htmlspecialchars($appointment['doctortype']) ?></span></p>
                         <p class="date-time">Date: <?= htmlspecialchars($appointment['date']) ?></p>
                         <p class="date-time">Time: <?= htmlspecialchars($appointment['time']) ?></p>
+
                         <?php if (!empty($appointment['zoomlink'])): ?>
                             <p class="accepted-message">Your request has been accepted.</p>
                             <p class="zoom-details">Zoom Link: <a href="<?= htmlspecialchars($appointment['zoomlink']) ?>" target="_blank"><?= htmlspecialchars($appointment['zoomlink']) ?></a></p>
@@ -399,12 +400,12 @@ mysqli_close($conn);
                             <p class="zoom-date-time">Meeting Time: <?= htmlspecialchars($appointment['zoom_time']) ?></p>
                         <?php else: ?>
                             <p class="pending-message">Your request is still pending.</p>
-                        <?php endif; ?>
-                        <!-- Cancel button for each request -->
-                        <form action="cancel_request.php" method="post">
+                            <form action="cancel_request.php" method="post">
                             <input type="hidden" name="request_id" value="<?= $appointment['requestid'] ?>">
-                            <button type="submit">Cancel Request</button>
+                            <button class="cancel" type="submit">Cancel Request</button>
                         </form>
+                        <?php endif; ?>
+                        
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -417,16 +418,17 @@ mysqli_close($conn);
         </div>
     </div>
 
-    <div class="popup-form" id="popupForm">
-        <div class="popup-form-content">
-            <form action="requestprocess.php" method="post">
-                <label for="doctorType">Doctor Type</label>
-                <select id="doctorType" name="doctorType" required>
-                    <option value="Gastro liver">Gastro liver</option>
-                    <option value="Child specialist">Child specialist</option>
-                    <option value="Cardiac Surgery">Cardiac Surgery</option>
-                    <option value="Thoracic Surgery">Thoracic Surgery</option>
-                    <option value="Chest & Esophageal Surgeon">Chest & Esophageal Surgeon</option>
+<div class="popup-form" id="popupForm">
+    <div class="popup-form-content">
+        <form method="POST" action="requestprocess.php">
+            <label for="doctor_type">Doctor Type</label>
+            <select id="doctor_type" name="doctor_type" onchange="showSchedules()" required>
+                <option value="">Select Doctor Type</option>
+                <option value="Gastro liver">Gastro liver</option>
+                <option value="Child specialist">Child specialist</option>
+                <option value="Cardiac Surgery">Cardiac Surgery</option>
+                <option value="Thoracic Surgery">Thoracic Surgery</option>
+                <option value="Chest & Esophageal Surgeon">Chest & Esophageal Surgeon</option>
                     <option value="Rheumatism specialist">Rheumatism specialist</option>
                     <option value="Chest (Lung) & Esophageal Specialist">Chest (Lung) & Esophageal Specialist</option>
                     <option value="Mother & Child Disease">Mother & Child Disease</option>
@@ -464,34 +466,132 @@ mysqli_close($conn);
                     <option value="Neuro Medicine">Neuro Medicine</option>
                     <option value="Neuro Surgeon">Neuro Surgeon</option>
                 </select>
-                
-                <label for="doctorGender">Doctor Gender</label>
-                <select id="doctorGender" name="doctorGender" required>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Any">Any</option>
-                </select>
-                
-                <label for="appointmentDate">Select Date</label>
-                <input type="date" id="appointmentDate" name="appointmentDate" required>
-                
-                <label for="appointmentTime">Select Time</label>
-                <input type="time" id="appointmentTime" name="appointmentTime" required>
-                
-                <button type="submit" class="submit-button">Submit</button>
-                <button type="button" class="close-button" onclick="closeForm()">Cancel</button>
-            </form>
-        </div>
+            </select>
+
+            <label for="gender">Doctor Gender</label>
+            <select id="gender" name="gender" required>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Any">Any</option>
+            </select>
+
+            <div id="scheduleCard" style="display: none;">
+                <h3>Available Time Schedules</h3>
+                <div id="doctorSchedules">
+                    <!-- Time schedules will be populated here -->
+                </div>
+            </div>
+
+            <input type="hidden" id="selectedDate" name="selectedDate">
+            <input type="hidden" id="selectedTime" name="selectedTime">
+
+            <button type="submit" class="submit-button">Submit</button>
+            <button type="button" class="close-button" onclick="closeForm()">Cancel</button>
+        </form>
     </div>
+</div>
 
-    <script>
-    function openForm() {
-        document.getElementById("popupForm").style.display = "flex";
+<script>
+    const schedules = {
+        "Gastro liver": [
+            { date: "2024-09-12", time: "10:00 AM - 11:00 AM" },
+            { date: "2024-09-13", time: "12:00 PM - 1:00 PM" }
+        ],
+        "Child specialist": [
+            { date: "2024-09-14", time: "09:00 AM - 10:00 AM" },
+            { date: "2024-09-15", time: "11:00 AM - 12:00 PM" }
+        ],
+        "Cardiac Surgery": [
+            { date: "2024-09-16", time: "01:00 PM - 02:00 PM" },
+            { date: "2024-09-17", time: "02:00 PM - 03:00 PM" }
+        ],
+        "Thoracic Surgery": [
+        { date: "2024-09-21", time: "09:00 AM - 10:00 AM" },
+        { date: "2024-09-22", time: "01:00 PM - 02:00 PM" },
+        { date: "2024-09-23", time: "04:00 PM - 05:00 PM" }
+    ],
+    "Orthodontics": [
+        { date: "2024-09-24", time: "10:00 AM - 11:00 AM" },
+        { date: "2024-09-25", time: "12:00 PM - 01:00 PM" },
+        { date: "2024-09-26", time: "02:00 PM - 03:00 PM" }
+    ],
+    "Psychiatrist": [
+        { date: "2024-09-27", time: "09:00 AM - 10:00 AM" },
+        { date: "2024-09-28", time: "11:00 AM - 12:00 PM" },
+        { date: "2024-09-29", time: "03:00 PM - 04:00 PM" }
+    ],
+    "Diabetes": [
+        { date: "2024-09-30", time: "08:00 AM - 09:00 AM" },
+        { date: "2024-10-01", time: "10:00 AM - 11:00 AM" },
+        { date: "2024-10-02", time: "01:00 PM - 02:00 PM" }
+    ]
+    };
+
+function showSchedules() {
+    const doctor_type = document.getElementById("doctor_type").value;
+    const scheduleCard = document.getElementById("scheduleCard");
+    const doctorSchedulesDiv = document.getElementById("doctorSchedules");
+    doctorSchedulesDiv.innerHTML = ""; // Clear previous schedules
+
+    if (doctor_type && schedules[doctor_type]) {
+        scheduleCard.style.display = "block";
+        schedules[doctor_type].forEach(schedule => {
+            const button = document.createElement("button");
+            button.textContent = `Date: ${schedule.date} - Time: ${schedule.time}`;
+            button.onclick = () => selectSchedule(schedule.date, schedule.time);
+            doctorSchedulesDiv.appendChild(button);
+        });
+    } else {
+        scheduleCard.style.display = "none";
+    }
+}
+
+function selectSchedule(date, time) {
+    document.getElementById("selectedDate").value = date;
+    document.getElementById("selectedTime").value = time;
+    alert(`You selected: ${date} at ${time}`);
+}
+
+function openForm() {
+    document.getElementById("popupForm").style.display = "flex";
+}
+
+function closeForm() {
+    document.getElementById("popupForm").style.display = "none";
+}
+
+</script>
+
+<style>
+    .popup-form-content {
+        width: 300px;
+        padding: 20px;
+        background-color: white;
+        border-radius: 5px;
     }
 
-    function closeForm() {
-        document.getElementById("popupForm").style.display = "none";
+    .popup-form {
+        display: none;
+        justify-content: center;
+        align-items: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
     }
-    </script>
+
+    button {
+        margin: 5px;
+    }
+
+    #doctorSchedules button {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+    }
+</style>
+
 </body>
 </html>
