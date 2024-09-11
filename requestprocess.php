@@ -7,7 +7,7 @@ include 'database.php';
 
 // Check if the form was submitted
 if (isset($_POST['doctorType'], $_POST['doctorGender'], $_POST['appointmentDate'], $_POST['appointmentTime'])) {
-    // Retrieve form data and sanitize it
+    // Sanitize form data
     $doctorType = mysqli_real_escape_string($conn, $_POST['doctorType']);
     $doctorGender = mysqli_real_escape_string($conn, $_POST['doctorGender']);
     $appointmentDate = mysqli_real_escape_string($conn, $_POST['appointmentDate']);
@@ -20,6 +20,10 @@ if (isset($_POST['doctorType'], $_POST['doctorGender'], $_POST['appointmentDate'
         // Retrieve user ID based on the name
         $sql = "SELECT id FROM appoint WHERE name = ?";
         $stmt = mysqli_prepare($conn, $sql);
+        if ($stmt === false) {
+            die('<div class="container"><p>Error preparing SQL: ' . mysqli_error($conn) . '</p></div>');
+        }
+
         mysqli_stmt_bind_param($stmt, "s", $user_name);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
@@ -28,8 +32,12 @@ if (isset($_POST['doctorType'], $_POST['doctorGender'], $_POST['appointmentDate'
             $userid = $row['id'];
 
             // Construct SQL query to insert the request
-            $sql_insert = "INSERT INTO request (doctortype, gender, date, time, userid) VALUES (?, ?, ?, ?, ?)";
+            $sql_insert = "INSERT INTO request (doctortype, gender, appointment_date, appointment_time, userid) VALUES (?, ?, ?, ?, ?)";
             $stmt_insert = mysqli_prepare($conn, $sql_insert);
+            if ($stmt_insert === false) {
+                die('<div class="container"><p>Error preparing SQL: ' . mysqli_error($conn) . '</p></div>');
+            }
+
             mysqli_stmt_bind_param($stmt_insert, "ssssi", $doctorType, $doctorGender, $appointmentDate, $appointmentTime, $userid);
 
             // Execute SQL query
